@@ -74,19 +74,19 @@ class Operators:
 
         # Construct data structures for handling arity
         self.arity_dict = dict(self.nonvar_arity, **{x: 0 for x in self.var_operators}, **{x: 0 for x in self.constant_operators})
-        self.zero_arity_mask = torch.tensor([1 if self.arity_dict[x]==0 else 0 for x in self.operator_list]).to(device)
-        self.nonzero_arity_mask = torch.tensor([1 if self.arity_dict[x]!=0 else 0 for x in self.operator_list]).to(device)
-        self.variable_mask = torch.Tensor([1 if x in self.var_operators else 0 for x in self.operator_list])
-        self.nonvariable_mask = torch.Tensor([0 if x in self.var_operators else 1 for x in self.operator_list])
+        self.zero_arity_mask = torch.tensor([1 if self.arity_dict[x]==0 else 0 for x in self.operator_list], device=self.device)
+        self.nonzero_arity_mask = torch.tensor([1 if self.arity_dict[x]!=0 else 0 for x in self.operator_list], device=self.device)
+        self.variable_mask = torch.tensor([1 if x in self.var_operators else 0 for x in self.operator_list], device=self.device)
+        self.nonvariable_mask = torch.tensor([0 if x in self.var_operators else 1 for x in self.operator_list], device=self.device)
 
         # Contains indices of all operators with arity 2
-        self.arity_two = torch.Tensor([i for i in range(len(self.operator_list)) if self.arity_dict[self.operator_list[i]]==2])
+        self.arity_two = torch.tensor([i for i in range(len(self.operator_list)) if self.arity_dict[self.operator_list[i]]==2], device=self.device)
         # Contains indices of all operators with arity 1
-        self.arity_one = torch.Tensor([i for i in range(len(self.operator_list)) if self.arity_dict[self.operator_list[i]]==1])
+        self.arity_one = torch.tensor([i for i in range(len(self.operator_list)) if self.arity_dict[self.operator_list[i]]==1], device=self.device)
         # Contains indices of all operators with arity 0
-        self.arity_zero = torch.Tensor([i for i in range(len(self.operator_list)) if self.arity_dict[self.operator_list[i]]==0])
+        self.arity_zero = torch.tensor([i for i in range(len(self.operator_list)) if self.arity_dict[self.operator_list[i]]==0], device=self.device)
         # Contains indices of all operators that are variables
-        self.variable_tensor = torch.Tensor([i for i in range(len(self.operator_list)) if operator_list[i] in self.var_operators])
+        self.variable_tensor = torch.tensor([i for i in range(len(self.operator_list)) if operator_list[i] in self.var_operators], device=self.device)
 
         # Construct data structures for handling function and variable mappings
         self.func_dict = dict(self.function_mapping)

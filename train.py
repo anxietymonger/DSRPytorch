@@ -129,10 +129,10 @@ def train(
         rewards = []
         for expression in expressions:
             rewards.append(benchmark(expression, X_rnn, y_rnn))
-        rewards = torch.tensor(rewards)
+        rewards = torch.tensor(rewards, device=device)
 
         # Update best expression
-        best_epoch_expression = expressions[np.argmax(rewards)]
+        best_epoch_expression = expressions[torch.argmax(rewards)]
         epoch_best_expressions.append(best_epoch_expression)
         epoch_best_rewards.append(max(rewards).item())
         if (max(rewards) > best_performance):
@@ -149,10 +149,10 @@ def train(
 
         # Compute risk threshold
         if (i == 0 and scale_initial_risk):
-            threshold = np.quantile(rewards, 1 - (1 - risk_factor) / (initial_batch_size / batch_size))
+            threshold = torch.quantile(rewards, 1 - (1 - risk_factor) / (initial_batch_size / batch_size))
         else:
-            threshold = np.quantile(rewards, risk_factor)
-        indices_to_keep = torch.tensor([j for j in range(len(rewards)) if rewards[j] > threshold])
+            threshold = torch.quantile(rewards, risk_factor)
+        indices_to_keep = torch.tensor([j for j in range(len(rewards)) if rewards[j] > threshold], device=device)
 
         if (len(indices_to_keep) == 0 and summary_print):
             print("Threshold removes all expressions. Terminating.")

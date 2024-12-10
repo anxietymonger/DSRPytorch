@@ -61,7 +61,7 @@ def main():
         scale_initial_risk = True,
         batch_size = 500,
         num_batches = 500,
-        use_gpu = False,
+        use_gpu = True,
         live_print = True,
         summary_print = True
     )

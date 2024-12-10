@@ -38,8 +38,8 @@ class DSRRNN(nn.Module):
         self.init_input = nn.Parameter(data=torch.rand(1, self.input_size), requires_grad=True).to(self.device)
         self.init_hidden = nn.Parameter(data=torch.rand(self.num_layers, self.hidden_size), requires_grad=True).to(self.device)
 
-        self.min_length = min_length
-        self.max_length = max_length
+        self.min_length = torch.tensor(min_length, device=device)
+        self.max_length = torch.tensor(max_length, device=device)
 
         if (self.type == 'rnn'):
             self.rnn = nn.RNN(
@@ -72,19 +72,19 @@ class DSRRNN(nn.Module):
         self.activation = nn.Softmax(dim=1)
 
     def sample_sequence(self, n, min_length=2, max_length=15):
-        sequences = torch.zeros((n, 0))
-        entropies = torch.zeros((n, 0)) # Entropy for each sequence
-        log_probs = torch.zeros((n, 0)) # Log probability for each token
+        sequences = torch.zeros((n, 0), device=self.device)
+        entropies = torch.zeros((n, 0), device=self.device) # Entropy for each sequence
+        log_probs = torch.zeros((n, 0), device=self.device) # Log probability for each token
 
-        sequence_mask = torch.ones((n, 1), dtype=torch.bool)
+        sequence_mask = torch.ones((n, 1), dtype=torch.bool, device=self.device)
 
         input_tensor = self.init_input.repeat(n, 1)
         hidden_tensor = self.init_hidden.repeat(n, 1)
         if (self.type == 'lstm'):
             hidden_lstm = self.init_hidden_lstm.repeat(n, 1)
 
-        counters = torch.ones(n) # Number of tokens that must be sampled to complete expression
-        lengths = torch.zeros(n) # Number of tokens currently in expression
+        counters = torch.ones(n, device=self.device) # Number of tokens that must be sampled to complete expression
+        lengths = torch.zeros(n, device=self.device) # Number of tokens currently in expression
 
         # While there are still tokens left for sequences in the batch
         while(sequence_mask.all(dim=1).any()):
@@ -115,7 +115,7 @@ class DSRRNN(nn.Module):
 
             # Update counter
             counters -= 1
-            counters += torch.isin(token, self.operators.arity_two).long() * 2
+            counters += torch.isin(token, self.operators.arity_two).long() * torch.tensor(2, device=self.device, dtype=torch.long)
             counters += torch.isin(token, self.operators.arity_one).long() * 1
 
             # Update sequence mask
@@ -164,17 +164,17 @@ class DSRRNN(nn.Module):
         # everything. Otherwise, constraints may make the only operators ones
         # that were initially set to zero, which will prevent us selecting
         # anything, resulting in an error being thrown
-        epsilon = torch.ones(output.shape) * 1e-20
-        output = output + epsilon.to(self.device)
+        epsilon = torch.ones(output.shape, device=self.device) * 1e-20
+        output = output + epsilon
 
         # ~ Check that minimum length will be met ~
         # Explanation here
-        min_boolean_mask = (counters + lengths >= torch.ones(counters.shape) * self.min_length).long()[:, None]
+        min_boolean_mask = (counters + lengths >= torch.ones(counters.shape, device=self.device) * self.min_length).long()[:, None]
         min_length_mask = torch.max(self.operators.nonzero_arity_mask[None, :], min_boolean_mask)
         output = torch.minimum(output, min_length_mask)
 
         # ~ Check that maximum length won't be exceed ~
-        max_boolean_mask = (counters + lengths <= torch.ones(counters.shape) * (self.max_length - 2)).long()[:, None]
+        max_boolean_mask = (counters + lengths <= torch.ones(counters.shape, device=self.device) * (self.max_length - 2)).long()[:, None]
         max_length_mask = torch.max(self.operators.zero_arity_mask[None, :], max_boolean_mask)
         output = torch.minimum(output, max_length_mask)
 
@@ -189,7 +189,7 @@ class DSRRNN(nn.Module):
             counter_mask = (counters == 1)
             contains_novar_mask = ~(torch.isin(sequences, self.operators.variable_tensor).any(axis=1))
             last_token_and_no_var_mask = (~torch.logical_and(counter_mask, contains_novar_mask)[:, None]).long()
-            nonvar_zeroarity_mask = torch.max(nonvar_zeroarity_mask, last_token_and_no_var_mask * torch.ones(nonvar_zeroarity_mask.shape)).long()
+            nonvar_zeroarity_mask = torch.max(nonvar_zeroarity_mask, last_token_and_no_var_mask * torch.ones(nonvar_zeroarity_mask.shape, device=self.device)).long()
             output = torch.minimum(output, nonvar_zeroarity_mask)
 
         return output
@@ -197,14 +197,14 @@ class DSRRNN(nn.Module):
     def get_parent_sibling(self, sequences, lengths):
         """Returns parent, sibling for the most recent token in token_list
         """
-        parent_sibling = torch.ones((lengths.shape[0], 2)) * -1
+        parent_sibling = torch.ones((lengths.shape[0], 2), device=self.device) * -1
         recent = int(lengths[0].item())-1
 
-        c = torch.zeros(lengths.shape[0])
+        c = torch.zeros(lengths.shape[0], device=self.device)
         for i in range(recent, -1, -1):
             # Determine arity of the i-th tokens
             token_i = sequences[:, i]
-            arity = torch.zeros(lengths.shape[0])
+            arity = torch.zeros(lengths.shape[0], device=self.device)
             arity += torch.isin(token_i, self.operators.arity_two).long() * 2
             arity += torch.isin(token_i, self.operators.arity_one).long() * 1
 
@@ -246,7 +246,7 @@ class DSRRNN(nn.Module):
         parent_sibling = parent_sibling * (~recent_nonzero_mask).long()
 
         # This tensor is n x 2 where the 2 dimension is [recent token, -1]
-        recent_parent_sibling = torch.cat((sequences[:, recent, None], -1*torch.ones((lengths.shape[0], 1))), axis=1)
+        recent_parent_sibling = torch.cat((sequences[:, recent, None], -1*torch.ones((lengths.shape[0], 1), device=self.device)), axis=1)
 
         # We set values of recent_parent_sibling where recent_nonzero_mask is False
         # to zero.
