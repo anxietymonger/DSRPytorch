@@ -22,7 +22,7 @@ import torch
 ###############################################################################
 
 class DSRRNN(nn.Module):
-    def __init__(self, operators, hidden_size, device, min_length=2, max_length=15, type='rnn', num_layers=1, dropout=0.0):
+    def __init__(self, operators, hidden_size, min_length=2, max_length=15, type='rnn', num_layers=1, dropout=0.0):
         super(DSRRNN, self).__init__()
 
         self.input_size = 2*len(operators) # One-hot encoded parent and sibling
@@ -31,15 +31,15 @@ class DSRRNN(nn.Module):
         self.num_layers = num_layers
         self.dropout = dropout
         self.operators = operators
-        self.device = device
+        self.device = operators.device
         self.type = type
 
         # Initial cell optimization
-        self.init_input = nn.Parameter(data=torch.rand(1, self.input_size), requires_grad=True).to(self.device)
-        self.init_hidden = nn.Parameter(data=torch.rand(self.num_layers, self.hidden_size), requires_grad=True).to(self.device)
+        self.init_input = nn.Parameter(data=torch.rand(1, self.input_size), requires_grad=True)
+        self.init_hidden = nn.Parameter(data=torch.rand(self.num_layers, self.hidden_size), requires_grad=True)
 
-        self.min_length = torch.tensor(min_length, device=device)
-        self.max_length = torch.tensor(max_length, device=device)
+        self.min_length = torch.tensor(min_length, device=self.device)
+        self.max_length = torch.tensor(max_length, device=self.device)
 
         if (self.type == 'rnn'):
             self.rnn = nn.RNN(
@@ -49,7 +49,7 @@ class DSRRNN(nn.Module):
                 batch_first = True,
                 dropout = self.dropout
             )
-            self.projection_layer = nn.Linear(self.hidden_size, self.output_size).to(self.device)
+            self.projection_layer = nn.Linear(self.hidden_size, self.output_size)
         elif (self.type == 'lstm'):
             self.lstm = nn.LSTM(
                 input_size = self.input_size,
@@ -59,7 +59,7 @@ class DSRRNN(nn.Module):
                 proj_size = self.output_size,
                 dropout = self.dropout
             ).to(self.device)
-            self.init_hidden_lstm = nn.Parameter(data=torch.rand(self.num_layers, self.output_size), requires_grad=True).to(self.device)
+            self.init_hidden_lstm = nn.Parameter(data=torch.rand(self.num_layers, self.output_size), requires_grad=True)
         elif (self.type == 'gru'):
             self.gru = nn.GRU(
                 input_size = self.input_size,
@@ -68,7 +68,7 @@ class DSRRNN(nn.Module):
                 batch_first = True,
                 dropout = self.dropout
             )
-            self.projection_layer = nn.Linear(self.hidden_size, self.output_size).to(self.device)
+            self.projection_layer = nn.Linear(self.hidden_size, self.output_size)
         self.activation = nn.Softmax(dim=1)
 
     def sample_sequence(self, n, min_length=2, max_length=15):

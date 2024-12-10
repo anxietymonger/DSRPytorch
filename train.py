@@ -13,15 +13,11 @@
 ###############################################################################
 
 import time
-import random
 import torch
 import torch.nn as nn
-import numpy as np
-from torch.autograd import Variable
 from operators import Operators
 from rnn import DSRRNN
 from expression_utils import *
-from collections import Counter
 
 ###############################################################################
 # Main Training loop
@@ -100,7 +96,7 @@ def train(
 
     # Initialize operators, RNN, and optimizer
     operators = Operators(operator_list, device)
-    dsr_rnn = DSRRNN(operators, hidden_size, device, min_length=min_length,
+    dsr_rnn = DSRRNN(operators, hidden_size, min_length=min_length,
                      max_length=max_length, type=type, dropout=dropout
                      ).to(device)
     if (optimizer == 'adam'):

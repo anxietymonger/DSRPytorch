@@ -13,7 +13,6 @@
 # Dependencies
 ###############################################################################
 
-import time
 from collections import Counter
 
 import torch
